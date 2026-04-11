@@ -246,6 +246,7 @@ controlled from the master control-plane node."
 }
 
 install_ingress_controller(){
+    echo "To install an ingress controller, you need to have at least one working node added to the cluster, or have a working control-node."
     read -p "Would you like to use nginx (n)? or HAProxy (h)?" choice
     if [[ $choice == "n" ]]; then
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
