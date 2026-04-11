@@ -77,7 +77,7 @@ EOF
     sudo apt install -y containerd.io docker-registry docker-ce-cli docker-ce
 
     ## configure containerd and set to to start useing systemd cgroup
-    containerd config default | sudo tee /etc/containerd/config.toml >/dev/null 2>&1
+    containerd config default | sudo tee /etc/containerd/config.toml &> /dev/null
     sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
 
     ## restart and endable containerd
@@ -163,6 +163,7 @@ EOF
     sudo systemctl start docker-registry.service
     sleep 1s
     sudo usermod -aG docker $USER
+    echo $docker_password | docker login $target_repository -u $docker_username --password-stdin &> /dev/null
 }
 
 
@@ -266,7 +267,7 @@ install_ingress_controller(){
 
 create_persistent_volume(){
     ## create, or recreate the kubectl persistant volume
-    if kubectl get pv fortiaigate-pv > /dev/null 2>&1; then
+    if kubectl get pv fortiaigate-pv &> /dev/null; then
         read -p "pv exsists, would you like to delete and recreate it? (y/n): " renew_pv
         if [[ "${renew_pv,,}" == "y" ]]; then
             kubectl delete pv fortiaigate-pv
