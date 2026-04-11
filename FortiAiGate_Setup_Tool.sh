@@ -220,7 +220,7 @@ install_master(){
 install_worker(){
     ## check to see if the master node is reachable
     read -p "What is the IP address of the master node?" master_ip
-    read -p "What is the name of the master node?" master_name
+    read -p "What is the hostname of the master node?" master_name
     read -p "What is the admin username of the master node?" master_username
     while ! ping -c 1 "$master_ip"; do
         echo "$master_ip is not responding to icmp."
