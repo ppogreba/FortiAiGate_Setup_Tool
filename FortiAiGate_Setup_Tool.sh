@@ -50,7 +50,7 @@ install_base(){
     sudo sed -i '/swap/s/^/#/' /etc/fstab
     sudo mkdir -p /mnt/disks/ssd1
     ## Setup configuration for the containerd serivce
-    sudo tee /etc/modules-load.d/containerd.conf <<'EOF'
+    sudo tee /etc/modules-load.d/containerd.conf <<EOF
 overlay
 br_netfilter
 EOF
@@ -124,7 +124,7 @@ setup_docker_registry(){
     done
     sudo mkdir -p /etc/docker/registry/
     
-    sudo tee /etc/docker/registry/config.yml >/dev/null << EOF
+    sudo tee /etc/docker/registry/config.yml >/dev/null <<EOF
 version: 0.1
 log:
   fields:
@@ -162,7 +162,8 @@ EOF
     sudo systemctl stop docker-registry.service
     sudo systemctl start docker-registry.service
     sleep 1s
-    sudo usermod -aG docker $USER && newgrp docker
+    sudo usermod -aG docker $USER
+    newgrp docker
 }
 
 
@@ -199,6 +200,7 @@ install_master(){
     echo 'source <(docker completion bash)' >>~/.bashrc
     source ~/.bashrc # Reload the shell configuration
     setup_docker_registry
+
     ## Single host?
     read -p "Would you like this install to be a single host (only master) deployment? (note: requires 16 cpu cores, 48gig ram and 300g hd)" answer
     if [[ ${answer,,} == "y" || ${answer,,} == "single" || ${answer,,} == "yes" ]]; then
@@ -213,8 +215,6 @@ install_master(){
         kubeadm token create --print-join-command
         echo "^^^^^^^^^^^^^^^^^^^^^^^SAVE THIS COMMAND^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     fi
-    echo -e "\nRerun program for more options.\nNow exiting."
-    exit 0
 }
 
 install_worker(){
@@ -281,7 +281,7 @@ create_persistent_volume(){
         ready_nodes+=("$line")
     done <<< "$READY_NODES"
     node_list=$(printf "          - %s\\n" "${ready_nodes[@]}")
-    kubectl apply -f - <<-EOF
+    kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -304,7 +304,7 @@ spec:
           operator: In
           values:
 ${node_list}
-          
+
 EOF
     sleep 1
     kubectl get pv -o wide
