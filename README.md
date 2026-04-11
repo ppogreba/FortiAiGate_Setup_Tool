@@ -9,7 +9,9 @@ Place this program file into the same directory as all the .tar files aquired fo
 nano FortiAiGate_Setup_Tool.sh 
 
 ##editable variables at the top to meet your network requirements
+
 local_as="64512"
+
 k8s_cidr="10.244.0.0/16"
 
 
