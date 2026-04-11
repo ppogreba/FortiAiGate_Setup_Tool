@@ -15,5 +15,6 @@ local_as="64512"
 k8s_cidr="10.244.0.0/16"
 
 ## Make Executable and run
-### chmod +x FortiAiGate_Setup_Tool.sh
-### ./FortiAiGate_Setup_Tool.sh
+chmod +x FortiAiGate_Setup_Tool.sh
+
+./FortiAiGate_Setup_Tool.sh
