@@ -163,7 +163,6 @@ EOF
     sudo systemctl start docker-registry.service
     sleep 1s
     sudo usermod -aG docker $USER && newgrp docker
-    echo $docker_password | docker login $target_repository -u $docker_username --password-stdin
 }
 
 
