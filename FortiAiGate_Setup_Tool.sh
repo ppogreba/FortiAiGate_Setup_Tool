@@ -209,11 +209,11 @@ install_master(){
     else
         ## reprint join command at the end for easy access
         echo -e "\n\t\tSuccess!!! You can now move on to importing images to the registry.
-        Join new worker nodes to the cluster with the command below after running
-        'Install Worker Config'.\n"
+        Join new worker nodes to the cluster with the command below after running 'Install Worker Config'.\n"
         
-        kubeadm token create --print-join-command
-        echo "^^^^^^^^^^^^^^^^^^^^^^^SAVE THIS COMMAND^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        join_command=$(kubeadm token create --print-join-command)
+        echo -e "\nsudo $join_command"
+        echo "^^^^^^^^^^^^^^^^^^^^^^^SAVE THIS COMMAND TO JOIN WORKERS^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     fi
 }
 
@@ -227,11 +227,12 @@ install_worker(){
         read -p "Are you sure the ip is $master_ip? Enter again: " master_ip
     done
     echo -e "Attempting to login...\nWhat is the master admin password so we can pull and trust the repository cert?"
-    sudo scp $master_admin@$master_ip:/etc/docker/cert.d/"$target_repository"/* \
-    /etc/docker/cert.d/"$target_repository"/
-    sudo chmod 644 /etc/docker/cert.d/"$target_repository"/myCA.crt
-    sudo chmod 644 /etc/docker/cert.d/"$target_repository"/myCA.key
-    sudo cp /etc/docker/cert.d/"$target_repository"/* /usr/local/share/ca-certificates/
+    sudo mkdir -p /etc/docker/cert.d/$master_name:8443/
+    sudo scp $master_username@$master_ip:/etc/docker/cert.d/$master_name:8443/* \
+    /etc/docker/cert.d/$master_name:8443/
+    sudo chmod 644 /etc/docker/cert.d/$master_name:8443/myCA.crt
+    sudo chmod 644 /etc/docker/cert.d/$master_name:8443/myCA.key
+    sudo cp /etc/docker/cert.d/$master_name:8443/* /usr/local/share/ca-certificates/
     sudo update-ca-certificates
 
 
