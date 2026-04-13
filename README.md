@@ -23,3 +23,14 @@ k8s_cidr="10.244.0.0/16"
 chmod +x FortiAiGate_Setup_Tool.sh
 
 ./FortiAiGate_Setup_Tool.sh
+
+## After Cluster Setup
+
+Follow the docs to deploy FortiAiGate
+
+## NOTE values created by program in values.yaml:
+
+fortiaigate:
+  image:
+    repository: master_hostname:8443 ## replace master_hostname with your actual hostname ie master:8443
+    pullSecrets: [name: docker-imagepull]
