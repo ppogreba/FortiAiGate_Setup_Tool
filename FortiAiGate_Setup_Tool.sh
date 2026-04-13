@@ -1,19 +1,19 @@
 #!/bin/bash
 # set -x
+
 ## editable variables
 local_as="64512"
 k8s_cidr="10.244.0.0/16"
 
-
 ##########################
-target_repository="$HOSTNAME:8443"
+target_repo_build="$HOSTNAME:8443"
 ## DEFINING FUNCTIONS, scroll down to the bottom
 setup_docker_registry_certs(){
     current_ip=$(hostname -I | awk '{print $1}')
     if [ ! -n "$(grep -P "${current_ip}[[:space:]]+$HOSTNAME" "/etc/hosts")" ]; then
         echo -e "$currnet_ip $HOSTNAME" | sudo tee -a "/etc/hosts" > /dev/null
     fi    
-    sudo mkdir -p /etc/docker/cert.d/"$target_repository"/
+    sudo mkdir -p /etc/docker/cert.d/"$target_repo_build"/
     tee openssl.cnf >/dev/null <<EOF
 [req]
 distinguished_name = req_distinguished_name
@@ -29,17 +29,18 @@ IP.1 = 127.0.0.1
 IP.2 = $current_ip
 EOF
     sudo openssl req -x509 -new -nodes -newkey rsa:4096 -sha256 -days 3650 \
-    -keyout /etc/docker/cert.d/"$target_repository"/myCA.key \
-    -out /etc/docker/cert.d/"$target_repository"/myCA.crt \
+    -keyout /etc/docker/cert.d/"$target_repo_build"/myCA.key \
+    -out /etc/docker/cert.d/"$target_repo_build"/myCA.crt \
     -config openssl.cnf -extensions v3_req
     ## Cleanup
     rm openssl.cnf
 
     ## Set permissions
-    sudo chmod 644 /etc/docker/cert.d/"$target_repository"/myCA.crt
-    sudo chmod 644 /etc/docker/cert.d/"$target_repository"/myCA.key
-    sudo cp /etc/docker/cert.d/"$target_repository"/* /usr/local/share/ca-certificates/
+    sudo chmod 644 /etc/docker/cert.d/"$target_repo_build"/myCA.crt
+    sudo chmod 644 /etc/docker/cert.d/"$target_repo_build"/myCA.key
+    sudo cp /etc/docker/cert.d/"$target_repo_build"/* /usr/local/share/ca-certificates/
     sudo update-ca-certificates
+
 }
 install_base(){
 ## update and upgrade packages
@@ -77,7 +78,7 @@ EOF
     sudo apt install -y containerd.io docker-registry docker-ce-cli docker-ce
 
     ## configure containerd and set to to start useing systemd cgroup
-    containerd config default | sudo tee /etc/containerd/config.toml &> /dev/null
+    containerd config default | sudo tee /etc/containerd/config.toml &>/dev/null
     sudo sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
 
     ## restart and endable containerd
@@ -141,8 +142,8 @@ http:
   headers:
     X-Content-Type-Options: [nosniff]
   tls:
-    certificate: /etc/docker/cert.d/${target_repository}/myCA.crt
-    key: /etc/docker/cert.d/${target_repository}/myCA.key
+    certificate: /etc/docker/cert.d/${target_repo_build}/myCA.crt
+    key: /etc/docker/cert.d/${target_repo_build}/myCA.key
   auth:
     htpasswd:
       realm: basic-realm
@@ -156,14 +157,14 @@ EOF
     sudo htpasswd -Bbc /etc/docker/registry/.htpasswd $docker_username $docker_password
     ## create kubernetes service account for logging into local docker registry
     kubectl create namespace fortiaigate
-    kubectl patch serviceaccount default -n fortiaigate -p '{"imagePullSecrets": [{"name": "$target_repository"}]}'
-    kubectl create secret docker-registry docker-imagepull -n fortiaigate --docker-server=$target_repository --docker-username=$docker_username --docker-password=$docker_password
+    kubectl patch serviceaccount default -n fortiaigate -p '{"imagePullSecrets": [{"name": "$target_repo_build"}]}'
+    kubectl create secret docker-registry docker-imagepull -n fortiaigate --docker-server=$target_repo_build --docker-username=$docker_username --docker-password=$docker_password
     ## Reset Docker Registry Service
     sudo systemctl stop docker-registry.service
     sudo systemctl start docker-registry.service
     sleep 1s
     sudo usermod -aG docker $USER
-    echo $docker_password | docker login $target_repository -u $docker_username --password-stdin &> /dev/null
+    echo $docker_password | docker login $target_repo_build -u $docker_username --password-stdin &> /dev/null
 }
 
 
@@ -209,7 +210,8 @@ install_master(){
     else
         ## reprint join command at the end for easy access
         echo -e "\n\t\tSuccess!!! You can now move on to importing images to the registry.
-        Join new worker nodes to the cluster with the command below after running 'Install Worker Config'.\n"
+        Join new worker nodes to the cluster with the command below after running
+        'Install Worker Config'.\n"
         
         join_command=$(kubeadm token create --print-join-command)
         echo -e "\nsudo $join_command"
@@ -240,7 +242,22 @@ install_worker(){
     echo -e "$master_ip $master_name" | sudo tee -a "/etc/hosts" > /dev/null
     ## install base configuration
     install_base
-    
+    read -p "Will this be a Nvidia/GPU enabled worker? (y/n)" gpu
+    if [[ ${gpu,,} == "y" ]]; then
+        sudo apt-get update && sudo apt-get install -y --no-install-recommends ca-certificates curl gnupg2 nvidia-driver-580
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+        && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        sudo apt-get update && 
+        nctv="1.19.0-1"
+        sudo apt-get install -y nvidia-container-toolkit=$nctv nvidia-container-toolkit-base=$nctv libnvidia-container-tools=$nctv libnvidia-container1=$nctv
+        sudo nvidia-ctk runtime configure --runtime=containerd
+        echo "Success!! REBOOTING NOW!!!"
+        sleep 2
+        sudo reboot
+    fi
+
     echo -e "Next you need to join the worker to the master node with the kubeadm join command you got at the
 end of the master install. After that, you are done here. Everything else is installed and
 controlled from the master control-plane node."
@@ -248,7 +265,7 @@ controlled from the master control-plane node."
 }
 
 install_ingress_controller(){
-    echo "To install an ingress controller, you need to have at least one working node added to the cluster, or have a working control-node."
+    echo "To install an ingress controller, you need to have at least one working node added to the cluster, or have a working control node."
     read -p "Would you like to use nginx (n)? or HAProxy (h)?" choice
     if [[ $choice == "n" ]]; then
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -265,7 +282,6 @@ install_ingress_controller(){
     fi
 }
 
-
 create_persistent_volume(){
     ## create, or recreate the kubectl persistant volume
     if kubectl get pv fortiaigate-pv &> /dev/null; then
@@ -275,13 +291,7 @@ create_persistent_volume(){
             echo "please ssh into nodes and manually delete the contents of /mnt/disks/ssd1/"
         fi
     fi
-    READY_NODES=$(kubectl get nodes -o json | jq -r '.items[] | select(.status.conditions[] | 
-    .type=="Ready" and .status=="True") | .metadata.name')
-    ready_nodes=()
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Double quotes around "$line" preserve spaces and newlines
-        ready_nodes+=("$line")
-    done <<< "$READY_NODES"
+    ready_nodes=$(kubectl get nodes --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[*].metadata.name}')
     node_list=$(printf "          - %s\\n" "${ready_nodes[@]}")
     kubectl apply -f - <<EOF
 apiVersion: v1
@@ -338,18 +348,18 @@ push_fortiaigate(){
             image="${repository##*/}"
             tag=$(echo "$item" | jq -r '.Tag')
             tag_lower=${tag,,}
-            docker tag "$repository:$tag" "$target_repository/$image:$tag_lower"
+            docker tag "$repository:$tag" "$target_repo_build/$image:$tag_lower"
             echo "Successfully tagged $image"
-            docker push "$target_repository/$image:$tag_lower"
+            docker push "$target_repo_build/$image:$tag_lower"
             echo "Done pushing $image."
         fi
     done <<< "$docker_images"
 }
 ## in curent folder, find all .tar docs and load them to docker unless its the helm chart... extract that and clean up
 import_fortiaigate(){
-    read -p "Are the images already loaded to docker?(y/n): " lp
-    if [[ ${lp,,} == "n" ]]; then    
-        docker login $target_repository
+    read -p "Are the images already loaded to local repository?(y/n): " load
+    if [[ ${load,,} == "n" ]]; then
+        docker login $target_repo_build
         for file in *.tar; do
             if [[ "$file" == *"helm"* ]]; then
                 echo "Found the helm chart, Extracting it!"
@@ -381,51 +391,96 @@ install_fortiaigate(){
     exit 0
 }
 
-start(){
-    ##### START OF PROGRAM #####
-    echo "
+nvidia_gpu_setup(){
+    nodes=$(kubectl get nodes --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[*].metadata.name}')
+    PS3="Which Node has GPUs? (1 -${#nodes[@]}): "
+    select node in "${nodes[@]} finished"; do
+        kubectl taint node $node nvidia.com/gpu=present:NoSchedule
+        kubectl label node $node node-type=gpu
+        if ! $(helm repo list | grep nvidia); then
+            helm repo add nvidia https://helm.ngc.nvidia.com/nvidia && helm repo update
+        fi           
+        if ! $(kubectl get pods -n gpu-operator | grep nvidia); then
+            echo "discovering nvida GPU, installing setting things up.. This will take a bit"
+            helm install --wait gpu-operator -n gpu-operator --create-namespace nvidia/gpu-operator --set driver.enabled=false --set toolkit.enabled=false \
+            & watch kubectl get pods -n gpu-operator
+        fi
+        kubectl describe node $node | grep "nvidia.com/gpu"
+    done
+}
+
+##### START OF PROGRAM #####
+start() {
+    main() {
+        banner
+        SELECT=("Master Node" "Worker Node" "Exit")
+        PS3="Are we setting up a Master or Worker Node?: "
+        select master_worker in "${SELECT[@]}"; do
+            case "$master_worker" in
+                "Master Node") master;;
+                "Worker Node") worker;;
+                "Exit") exit 0;;
+                *) echo -e "\nNOPE! please make a valid selection" && sleep 1s && main;;
+            esac
+        done
+    }
+    master(){
+        OPTIONS=("Install Master Config" "Import Images to local registry" "Install Ingress Controller" \
+        "Create PersistentVolume" "Nvidia GPU K8s setup" "Install FortiAiGate" "Uninstall FortiAiGate" "Set Bgp Peer" "Back")
+        PS3="Which option do you want? (1 -${#OPTIONS[@]}): "
+        select option in "${OPTIONS[@]}"; do
+            case "$option" in
+                "Install Master Config") install_master;;
+                "Import Images to local registry") import_fortiaigate;;
+                "Install Ingress Controller") install_ingress_controller;;
+                "Create PersistentVolume") create_persistent_volume;;
+                "Nvidia GPU K8s setup") nvidia_gpu_setup;;
+                "Install FortiAiGate") install_fortiaigate;;
+                "Set Bgp Peer") set_bgp_peer;;
+                "Uninstall FortiAiGate") helm uninstall fortiaigate -n fortiaigate;;
+                "Back") start;;
+                *) echo -e "\nNOPE! please make a valid selection" && sleep 1s && master;;
+            esac
+        done
+    }
+    worker(){
+        OPTIONS=("Install Worker Config" "Back")
+        PS3="Which option do you want? (1 -${#OPTIONS[@]}): "
+        select option in "${OPTIONS[@]}"; do
+            case "$option" in
+                "Install Worker Config") install_worker;;
+                "Back") start;;
+                *) echo -e "\nNOPE! please make a valid selection" && sleep 1s && worker;;
+            esac
+        done
+    }
+    banner(){
+        echo "
 ___________            __  .__   _____  .__  ________        __
 \_   _____/___________/  |_|__| /  _  \ |__|/  _____/_____ _/  |_  ____
- |    __)/  _ \_  __ \   __\  |/  /_\  \|  /   \  ___\__  \\\   __\/ __ \ 
- |     \(  <_> )  | \/|  | |  /    |    \  \    \_\  \/ __ \|  | \  ___/
- \___  / \____/|__|   |__| |__\____|__  /__|\______  (____  /__|  \___  >
-     \/                               \/           \/     \/          \/
-  _________       __                 ___________           .__
- /   _____/ _____/  |_ __ ________   \__    ___/___   ____ |  |
- \_____  \_/ __ \   __\  |  \____ \    |    | /  _ \ /  _ \|  |
- /        \  ___/|  | |  |  /  |_> >   |    |(  <_> |  <_> )  |__
+|    __)/  _ \_  __ \   __\  |/  /_\  \|  /   \  ___\__  \\\   __\/ __ \ 
+|     \(  <_> )  | \/|  | |  /    |    \  \    \_\  \/ __ \|  | \  ___/
+\___  / \____/|__|   |__| |__\____|__  /__|\______  (____  /__|  \___  >
+    \/                               \/           \/     \/          \/
+_________       __                 ___________           .__
+/   _____/ _____/  |_ __ ________   \__    ___/___   ____ |  |
+\_____  \_/ __ \   __\  |  \____ \    |    | /  _ \ /  _ \|  |
+/        \  ___/|  | |  |  /  |_> >   |    |(  <_> |  <_> )  |__
 /_______  /\___  >__| |____/|   __/    |____| \____/ \____/|____/
         \/     \/           |__|
-    - Built by Paul Pogreba"
-    echo -e "\nThis program is designed to work on a clean base install of Ubuntu Server 24.04 LTS.
+- Built by Paul Pogreba"
+
+        echo -e "\nThis program is designed to work on a clean base install of Ubuntu Server 24.04 LTS.
 This program will help to setup a master and worker nodes. If you choose multi node
 cluster, join the worker(s) to the cluster before you continue to the other steps.
 Run this script from inside the folder where all the downloaded .tar files reside for
 a complete operational install of FortiAiGate. If you run this with 'sudo' please exit
 and relaunch without elevated privilages. You will be asked for your sudo password later.\n
-  Docs for the deployment of FortiAiGate can be found at
+Docs for the deployment of FortiAiGate can be found at
 https://docs.fortinet.com/document/fortiaigate/8.0.0/fortiaigate-administration-guide/512071/fortiaigate-deployment \n"
+    }
 
-    OPTIONS=("Install Master Config" "Install Worker Config" "Import Images to local registry" "Install Ingress Controller" \
-    "Create PersistentVolume" "Install FortiAiGate" "Uninstall FortiAiGate" "Set Bgp Peer" "Exit")
-    PS3="Which option do you want? (1 -${#OPTIONS[@]}): "
-
-
-    select option in "${OPTIONS[@]}"; do
-        case "$option" in
-            "Install Master Config") install_master;;
-            "Install Worker Config") install_worker;;
-            "Import Images to local registry") import_fortiaigate;;
-            "Install Ingress Controller") install_ingress_controller;;
-            "Create PersistentVolume") create_persistent_volume;;
-            "Install FortiAiGate") install_fortiaigate;;
-            "Set Bgp Peer") set_bgp_peer;;
-            "Uninstall FortiAiGate") helm uninstall fortiaigate -n fortiaigate;;
-            "Exit") exit 0;;
-            *) echo -e "\nNOPE! please make a valid selection" && sleep 1s && start;;
-        esac
-    done
+    main
 }
-
 start
 exit 0
