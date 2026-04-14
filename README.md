@@ -13,7 +13,7 @@ nano FortiAiGate_Setup_Tool.sh
 
 Place all .tar FortiAiGate files in this folder
 
-##editable variables at the top to meet your network requirements
+### editable variables at the top to meet your network requirements
 
 local_as="64512"
 
