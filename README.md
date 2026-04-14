@@ -31,6 +31,7 @@ Follow the docs to deploy FortiAiGate
 ## NOTE values created by program in values.yaml:
 
 '''
+
 fortiaigate:
 
   image:
