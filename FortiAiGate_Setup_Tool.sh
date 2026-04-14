@@ -426,7 +426,7 @@ start() {
     }
     master(){
         OPTIONS=("Install Master Config" "Import Images to local registry" "Install Ingress Controller" \
-        "Create PersistentVolume" "Nvidia GPU K8s setup" "Install FortiAiGate" "Uninstall FortiAiGate" "Set Bgp Peer" "Back")
+        "Create PersistentVolume" "Nvidia GPU K8s setup" "Install\Update FortiAiGate" "Uninstall FortiAiGate" "Set Bgp Peer" "Back")
         PS3="Which option do you want? (1 -${#OPTIONS[@]}): "
         select option in "${OPTIONS[@]}"; do
             case "$option" in
@@ -435,7 +435,7 @@ start() {
                 "Install Ingress Controller") install_ingress_controller;;
                 "Create PersistentVolume") create_persistent_volume;;
                 "Nvidia GPU K8s setup") nvidia_gpu_setup;;
-                "Install FortiAiGate") install_fortiaigate;;
+                "Install\Update FortiAiGate") install_fortiaigate;;
                 "Set Bgp Peer") set_bgp_peer;;
                 "Uninstall FortiAiGate") helm uninstall fortiaigate -n fortiaigate;;
                 "Back") start;;
