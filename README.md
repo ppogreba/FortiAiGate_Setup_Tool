@@ -9,7 +9,7 @@ git clone https://github.com/ppogreba/FortiAiGate_Setup_Tool.git
 
 cd FortiAiGate_Setup_Tool
 
-nano FortiAiGate_Setup_Tool.sh 
+nano FortiAiGate_Setup_Tool
 
 Place all .tar FortiAiGate files in this folder
 
@@ -19,9 +19,9 @@ local_as="64512"
 k8s_cidr="10.244.0.0/16"
 ~~~
 ## Make Executable and run
-chmod +x FortiAiGate_Setup_Tool.sh
+chmod +x FortiAiGate_Setup_Tool
 
-./FortiAiGate_Setup_Tool.sh
+./FortiAiGate_Setup_Tool
 
 ## After Cluster Setup
 
