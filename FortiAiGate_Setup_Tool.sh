@@ -283,7 +283,7 @@ install_ingress_controller(){
 }
 
 create_persistent_volume(){
-    ## create, or recreate the kubectl persistant volume
+    ## create, or recreate the kubectl persistent volume
     if kubectl get pv fortiaigate-pv &> /dev/null; then
         read -p "pv exsists, would you like to delete and recreate it? (y/n): " renew_pv
         if [[ "${renew_pv,,}" == "y" ]]; then
@@ -300,7 +300,7 @@ metadata:
   name: fortiaigate-pv
 spec:
   capacity:
-    storage: 30Gi
+    storage: 50Gi
   volumeMode: Filesystem
   accessModes:
   - ReadWriteMany
