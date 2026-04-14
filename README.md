@@ -30,9 +30,9 @@ Follow the docs to deploy FortiAiGate
 
 ## NOTE values created by program in values.yaml:
 
-,,,yaml
+~~~yaml
 fortiaigate:
   image:
     repository: master_hostname:8443 ## replace master_hostname with your actual hostname ie master:8443
     pullSecrets: [name: docker-imagepull]
-,,,
+~~~
