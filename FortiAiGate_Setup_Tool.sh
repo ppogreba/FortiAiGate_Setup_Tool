@@ -406,6 +406,7 @@ nvidia_gpu_setup(){
             & watch kubectl get pods -n gpu-operator
         fi
         kubectl describe node $node | grep "nvidia.com/gpu"
+        kubectl taint node $node nvidia.com/gpu=present:NoSchedule-
     done
 }
 
