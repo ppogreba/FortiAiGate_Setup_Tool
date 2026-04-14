@@ -32,7 +32,10 @@ Follow the docs to deploy FortiAiGate
 
 '''
 fortiaigate:
+
   image:
+  
     repository: master_hostname:8443 ## replace master_hostname with your actual hostname ie master:8443
+    
     pullSecrets: [name: docker-imagepull]
 '''
