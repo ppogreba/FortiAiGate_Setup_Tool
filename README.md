@@ -14,11 +14,10 @@ nano FortiAiGate_Setup_Tool.sh
 Place all .tar FortiAiGate files in this folder
 
 ### editable variables at the top to meet your network requirements
-
+~~~bash
 local_as="64512"
-
 k8s_cidr="10.244.0.0/16"
-
+~~~
 ## Make Executable and run
 chmod +x FortiAiGate_Setup_Tool.sh
 
