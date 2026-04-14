@@ -5,13 +5,13 @@ Start with clean install of Ubuntu Server 24.04 LTS,
 
 
 # Installation
-Place this program file into the same directory as all the .tar files aquired for FortiAiGate and do the following:
-
 git clone https://github.com/ppogreba/FortiAiGate_Setup_Tool.git
 
 cd FortiAiGate_Setup_Tool
 
 nano FortiAiGate_Setup_Tool.sh 
+
+Place all .tar FortiAiGate files in this folder
 
 ##editable variables at the top to meet your network requirements
 
@@ -26,12 +26,11 @@ chmod +x FortiAiGate_Setup_Tool.sh
 
 ## After Cluster Setup
 
-Follow the docs to deploy FortiAiGate
+Follow the docs to setup values.yaml and deploy FortiAiGate
 
 https://docs.fortinet.com/document/fortiaigate/8.0.0/fortiaigate-administration-guide/784383/introduction
 
 ## NOTE values created by program in values.yaml:
-
 ~~~yaml
 fortiaigate:
   image:
