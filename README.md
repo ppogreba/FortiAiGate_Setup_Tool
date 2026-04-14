@@ -28,6 +28,8 @@ chmod +x FortiAiGate_Setup_Tool.sh
 
 Follow the docs to deploy FortiAiGate
 
+https://docs.fortinet.com/document/fortiaigate/8.0.0/fortiaigate-administration-guide/784383/introduction
+
 ## NOTE values created by program in values.yaml:
 
 ~~~yaml
