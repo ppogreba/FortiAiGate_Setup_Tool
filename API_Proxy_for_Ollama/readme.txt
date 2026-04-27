@@ -1,0 +1,1 @@
+This program is a very simple API proxy to expose an API endpoint from an ollama server and add an API key which is required for access. You can start manually, or run as daemon with systemctl services.
