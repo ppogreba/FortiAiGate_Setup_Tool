@@ -282,45 +282,45 @@ install_ingress_controller(){
     fi
 }
 
-create_persistent_volume(){
-    ## create, or recreate the kubectl persistent volume
-    if kubectl get pv fortiaigate-pv &> /dev/null; then
-        read -p "pv exsists, would you like to delete and recreate it? (y/n): " renew_pv
-        if [[ "${renew_pv,,}" == "y" ]]; then
-            kubectl delete pv fortiaigate-pv
-            echo "please ssh into nodes and manually delete the contents of /mnt/disks/ssd1/"
+create_persistent_volumes(){
+    read -ra ready_nodes <<< "$(kubectl get nodes --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[*].metadata.name}')"
+    for node in "${ready_nodes[@]}"; do
+        pv_name="fortiaigate-pv-${node}"
+        if kubectl get pv "$pv_name" &>/dev/null; then
+            read -p "${pv_name} exists, delete and recreate? (y/n): " renew_pv
+            [[ "${renew_pv,,}" == "y" ]] || continue
+            kubectl delete pv "$pv_name"
+            echo "ssh into ${node} and clear /mnt/disks/ssd1/ if needed"
         fi
-    fi
-    ready_nodes=$(kubectl get nodes --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[*].metadata.name}')
-    node_list=$(printf "          - %s\\n" "${ready_nodes[@]}")
-    kubectl apply -f - <<EOF
+        kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: fortiaigate-pv
+  name: ${pv_name}
 spec:
   capacity:
     storage: 50Gi
   volumeMode: Filesystem
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   persistentVolumeReclaimPolicy: Delete
-  storageClassName:
+  storageClassName: local-storage
   local:
     path: /mnt/disks/ssd1
   nodeAffinity:
     required:
       nodeSelectorTerms:
-      - matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-${node_list}
-
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - ${node}
 EOF
+    done
     sleep 1
     kubectl get pv -o wide
 }
+
 
 ## Sets for one basic BGP peer. See calico documentation for BGP filters and advanced setup
 set_bgp_peer(){
@@ -360,7 +360,7 @@ import_fortiaigate(){
     read -p "Are the images already loaded to local repository?(y/n): " load
     if [[ ${load,,} == "n" ]]; then
         docker login $target_repo_build
-        for file in *.tar; do
+        for file in *.tar*; do
             if [[ "$file" == *"helm"* ]]; then
                 echo "Found the helm chart, Extracting it!"
                 tar -xf $file
@@ -434,7 +434,7 @@ start() {
                 "Install Master Config") install_master;;
                 "Import Images to local registry") import_fortiaigate;;
                 "Install Ingress Controller") install_ingress_controller;;
-                "Create PersistentVolume") create_persistent_volume;;
+                "Create PersistentVolume") create_persistent_volumes;;
                 "Nvidia GPU K8s setup") nvidia_gpu_setup;;
                 "Install\Update FortiAiGate") install_fortiaigate;;
                 "Set Bgp Peer") set_bgp_peer;;
