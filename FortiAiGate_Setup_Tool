@@ -335,7 +335,7 @@ set_bgp_peer(){
         peerIP: $peer_ip
         asNumber: $peer_as
 EOF
-    calico get bgppeer && calico get bgpconfiguration
+    calicoctl get bgppeer && calicoctl get bgpconfiguration
 }
 
 ## Review docker images for all fortiaigate images and tag them in the repository for use by k8s cluster
