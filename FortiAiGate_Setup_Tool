@@ -282,27 +282,28 @@ install_ingress_controller(){
     fi
 }
 
-create_persistent_volumes(){
-    read -ra ready_nodes <<< "$(kubectl get nodes --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[*].metadata.name}')"
-    for node in "${ready_nodes[@]}"; do
-        pv_name="fortiaigate-pv-${node}"
-        if kubectl get pv "$pv_name" &>/dev/null; then
-            read -p "${pv_name} exists, delete and recreate? (y/n): " renew_pv
-            [[ "${renew_pv,,}" == "y" ]] || continue
-            kubectl delete pv "$pv_name"
-            echo "ssh into ${node} and clear /mnt/disks/ssd1/ if needed"
+create_persistent_volume(){
+    ## create, or recreate the kubectl persistent volume
+    if kubectl get pv fortiaigate-pv &> /dev/null; then
+        read -p "pv exsists, would you like to delete and recreate it? (y/n): " renew_pv
+        if [[ "${renew_pv,,}" == "y" ]]; then
+            kubectl delete pv fortiaigate-pv
+            echo "please ssh into nodes and manually delete the contents of /mnt/disks/ssd1/"
         fi
-        kubectl apply -f - <<EOF
+    fi
+    ready_nodes=$(kubectl get nodes --selector='!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[*].metadata.name}')
+    node_list=$(printf "${ready_nodes[@]},")
+    kubectl apply -f - <<EOF
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: ${pv_name}
+  name: fortiaigate-pv
 spec:
   capacity:
     storage: 50Gi
   volumeMode: Filesystem
   accessModes:
-    - ReadWriteMany
+  - ReadWriteMany
   persistentVolumeReclaimPolicy: Delete
   storageClassName: local-storage
   local:
@@ -310,13 +311,12 @@ spec:
   nodeAffinity:
     required:
       nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: In
-              values:
-                - ${node}
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values: [$ready_nodes]
+
 EOF
-    done
     sleep 1
     kubectl get pv -o wide
 }
