@@ -314,7 +314,7 @@ spec:
       - matchExpressions:
         - key: kubernetes.io/hostname
           operator: In
-          values: [$ready_nodes]
+          values: [$node_list]
 
 EOF
     sleep 1
