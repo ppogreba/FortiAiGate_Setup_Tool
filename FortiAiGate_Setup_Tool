@@ -321,7 +321,6 @@ EOF
     kubectl get pv -o wide
 }
 
-
 ## Sets for one basic BGP peer. See calico documentation for BGP filters and advanced setup
 set_bgp_peer(){
     read -p "BGP peer ip? (x.x.x.x): " peer_ip
@@ -434,7 +433,7 @@ start() {
                 "Install Master Config") install_master;;
                 "Import Images to local registry") import_fortiaigate;;
                 "Install Ingress Controller") install_ingress_controller;;
-                "Create PersistentVolume") create_persistent_volumes;;
+                "Create PersistentVolume") create_persistent_volume;;
                 "Nvidia GPU K8s setup") nvidia_gpu_setup;;
                 "Install\Update FortiAiGate") install_fortiaigate;;
                 "Set Bgp Peer") set_bgp_peer;;
