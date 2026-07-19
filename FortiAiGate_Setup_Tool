@@ -164,6 +164,7 @@ EOF
     sudo systemctl start docker-registry.service
     sleep 1s
     sudo usermod -aG docker $USER
+    newgrp docker
     echo $docker_password | docker login $target_repo_build -u $docker_username --password-stdin &> /dev/null
 }
 
@@ -185,7 +186,7 @@ install_master(){
     mkdir -p $HOME/.kube
     sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
+    
     ## Apply Network configuration
     echo "Waiting for Nodes to be ready...."
     kubectl wait --for=condition=Ready node --all --timeout=60s
