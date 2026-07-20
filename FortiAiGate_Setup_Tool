@@ -219,6 +219,8 @@ install_master(){
         echo -e "sudo $join_command" | tee join_workers.txt
         echo "^^^^^^^^^^^^^^^^^^^^^^^THIS COMMAND SAVED IN 'join_workers.txt' TO JOIN WORKERS^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     fi
+    echo "The Master Node will now reboot..."
+    sleep 5 && sudo reboot
 }
 
 install_worker(){
