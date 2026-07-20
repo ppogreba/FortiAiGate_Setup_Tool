@@ -166,8 +166,7 @@ EOF
     sudo systemctl start docker-registry.service
     sleep 1s
     sudo usermod -aG docker $USER
-    newgrp docker
-    echo $docker_password | docker login $target_repo_build -u $docker_username --password-stdin &> /dev/null
+    echo $docker_password | sudo docker login $target_repo_build -u $docker_username --password-stdin &> /dev/null
 }
 
 
@@ -214,11 +213,11 @@ install_master(){
         ## reprint join command at the end for easy access
         echo -e "\n\t\tSuccess!!! You can now move on to importing images to the registry.
         Join new worker nodes to the cluster with the command below after running
-        'Install Worker Config'.\n"
+        'Install Worker Config'.\n\n"
         
         join_command=$(kubeadm token create --print-join-command)
-        echo -e "\nsudo $join_command"
-        echo "^^^^^^^^^^^^^^^^^^^^^^^SAVE THIS COMMAND TO JOIN WORKERS^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        echo -e "sudo $join_command" | tee join_workers.txt
+        echo "^^^^^^^^^^^^^^^^^^^^^^^THIS COMMAND SAVED IN 'join_workers.txt' TO JOIN WORKERS^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     fi
 }
 
