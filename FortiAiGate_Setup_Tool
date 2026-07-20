@@ -236,7 +236,7 @@ install_worker(){
     sudo chmod 644 /etc/docker/cert.d/$master_name:8443/myCA.crt
     sudo chmod 644 /etc/docker/cert.d/$master_name:8443/myCA.key
     sudo cp /etc/docker/cert.d/$master_name:8443/* /usr/local/share/ca-certificates/
-    sudo update-ca-certificates
+    sudo update-ca-certificates --fresh
 
 
     ## Add host lookup for master
@@ -271,7 +271,7 @@ install_ingress_controller(){
     if [[ $choice == "n" ]]; then
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
         helm repo update
-        helm install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-nginx
+        helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --set controller.service.type=NodePort
     elif [[ $choice == "h" ]]; then
         helm repo add haproxytech https://haproxytech.github.io/helm-charts
         helm repo update
