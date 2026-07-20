@@ -109,6 +109,8 @@ install_calico(){
       logSeverityScreen: Info
       nodeToNodeMeshEnabled: true
       asNumber: $local_as
+      serviceClusterIPs:
+      - cidr: 10.96.0.0/12
 EOF
 }
 
